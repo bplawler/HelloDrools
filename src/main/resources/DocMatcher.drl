@@ -2,10 +2,11 @@ package HelloDrools
   
 import HelloDrools.Document
 
-// ============================
 rule "check for valid docs"
    when
-      $doc: Document( isValidated() == true) 
+      $doc: Document( checkValid() == true) 
    then
       System.out.println("Found valid document called " + $doc.name());
+      insertLogical(new MatchableDocument($doc));
 end
+
