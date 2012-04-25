@@ -1,0 +1,11 @@
+package HelloDrools
+  
+import HelloDrools.Document
+
+// ============================
+rule "check for valid docs"
+   when
+      $doc: Document( isValidated() == true) 
+   then
+      System.out.println("Found valid document called " + $doc.name());
+end
