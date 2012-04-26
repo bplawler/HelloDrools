@@ -1,12 +1,22 @@
 package HelloDrools
   
-import HelloDrools.Document
-
 rule "check for valid docs"
    when
       $doc: Document( checkValid() == true) 
    then
       System.out.println("Found valid document called " + $doc.name());
-      insertLogical(new MatchableDocument($doc));
+      if($doc.docType() == "dependent")
+        insertLogical(new MatchableDependentDocument($doc));
+      else
+        insertLogical(new MatchableRootDocument($doc));
 end
 
+rule "find additional matches"
+   when
+      $root: MatchableRootDocument()
+      $match: MatchableDependentDocument( 
+        $root.doc.args().get("foo") == $match.doc.args().get("foo") )
+   then
+      System.out.println("Found a match!");
+      insertLogical(new Match($root, $match));
+end
