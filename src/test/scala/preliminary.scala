@@ -42,6 +42,7 @@ object FirstStepsTest extends Specification {
 
     val session = HelloDrools.RulesEngine.kbase.newStatefulKnowledgeSession()
     //session.addEventListener( new DebugWorkingMemoryEventListener() );
+    session.addEventListener( new HelloEventListener() );
 
     "create new documents, insert them into the knowledge base" in {
       docs foreach { d: Document => d.factHandle = session.insert(d) }
