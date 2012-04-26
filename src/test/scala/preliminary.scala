@@ -2,6 +2,7 @@ package HelloDrools
 
 import org.specs2.mutable._
 import scala.collection.JavaConversions._
+import org.drools.event.rule.DebugWorkingMemoryEventListener
 
 object FirstStepsTest extends Specification {
 
@@ -40,6 +41,7 @@ object FirstStepsTest extends Specification {
                     new Document("D"), new Document("E"))
 
     val session = HelloDrools.RulesEngine.kbase.newStatefulKnowledgeSession()
+    //session.addEventListener( new DebugWorkingMemoryEventListener() );
 
     "create new documents, insert them into the knowledge base" in {
       docs foreach { d: Document => d.factHandle = session.insert(d) }
@@ -73,7 +75,7 @@ object FirstStepsTest extends Specification {
         session.update(d.factHandle, d)
       } ) 
       session.fireAllRules() must be equalTo(
-        docs.size /* valid docs */ + 1 /* matches */)
+        docs.size /* valid docs */ + 1 /* matchup */)
       session.getFactCount() must be equalTo(
         docs.size /* documents */ + 
         docs.size /* matchable documents */ +
@@ -93,7 +95,8 @@ object FirstStepsTest extends Specification {
     "with the match back in, invalidate a document" in {
       docs(3).args += ("foo" -> "MATCH")
       session.update(docs(3).factHandle, docs(3))
-      session.fireAllRules() must be equalTo(2 /* valid doc, match fires */)
+      session.fireAllRules() must be equalTo(1 /* updated doc now valid */ +
+                                             1 /* foo matchup found */)
       session.getFactCount() must be equalTo(
         docs.size /* documents */ + 
         docs.size /* matchable documents */ +
@@ -106,7 +109,69 @@ object FirstStepsTest extends Specification {
         docs.size     /* documents */ + 
         docs.size - 1 /* matchable documents */ +
         0             /* no matches, since half the match was invalidated */)
+    }
 
+    "with the match back in, add another match" in {
+      docs(3).args += ("foo" -> "MATCH", "bar" -> "for real")
+      session.update(docs(3).factHandle, docs(3))
+      session.fireAllRules() must be equalTo(1 /* updated doc now valid */ +
+                                             1 /* foo matchup found */)
+      session.getFactCount() must be equalTo(
+        docs.size /* documents */ + 
+        docs.size /* matchable documents */ +
+        1         /* matches */)
+
+      docs(2).args += ("foo" -> "MATCH")
+      session.update(docs(2).factHandle, docs(2))
+      session.fireAllRules() must be equalTo(1 /* doc no longer valid */ +
+                                             1 /* foo matchup found */)
+      session.getFactCount() must be equalTo(
+        docs.size     /* documents */ + 
+        docs.size     /* matchable documents */ +
+        1 + 1         /* another match */)
+    }
+
+    "invalidate the second match, confirming the matchup is still there" in {
+
+      docs(2).args += "foo" -> "NOT MATCH"
+      session.update(docs(2).factHandle, docs(2))
+      session.fireAllRules() must be equalTo(1 /* valid doc */)
+
+      session.getFactCount() must be equalTo(
+        docs.size     /* documents */ + 
+        docs.size     /* matchable documents */ +
+        1             /* match is still there, even w/o 2nd dep doc */)
+    }
+
+    "invalidate the first match, confirming the matchup is removed" in {
+      docs(3).args += "foo" -> "NOT MATCH"
+      session.update(docs(3).factHandle, docs(3))
+      session.fireAllRules() must be equalTo(1 /* valid doc */)
+      session.getFactCount() must be equalTo(
+        docs.size     /* documents */ + 
+        docs.size     /* matchable documents */ +
+        0             /* match should now be gone since both deps are gone */)
+    }
+
+    "match a root with 2 deps, invalidate the root and all should go away" in {
+      List(2, 3) map docs foreach ( (d:Document) => {
+        d.args += ("foo" -> "MATCH")
+        session.update(d.factHandle, d)
+      } ) 
+      session.fireAllRules() must be equalTo(2 /* 2 valid docs */ +
+                                             2 /* 2 matches found */)
+      session.getFactCount() must be equalTo(
+        docs.size     /* documents */ + 
+        docs.size     /* matchable documents */ +
+        2             /* 2 matches, 0->2 and 0->3 */)
+
+      docs(0).args += "foo" -> "NOT MATCH"
+      session.update(docs(0).factHandle, docs(0))
+      session.fireAllRules() must be equalTo(1 /* valid doc */)
+      session.getFactCount() must be equalTo(
+        docs.size     /* documents */ + 
+        docs.size     /* matchable documents */ +
+        2 - 2         /* both matches should be gone since root is gone. */)
     }
   }
 }

@@ -21,4 +21,5 @@ class MatchableRootDocument(doc: Document) extends MatchableDocument(doc)
 
 class MatchableDependentDocument(doc: Document) extends MatchableDocument(doc)
 
-class Match(val root: MatchableRootDocument, val dep: MatchableDependentDocument) 
+class Match(val root: MatchableRootDocument, 
+            val dep: MatchableDependentDocument)
